@@ -16,7 +16,7 @@ from django.utils.translation import get_language
 
 from dtrcity.models import Country, Region, City, AltName
 
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "HEAD"])
 def all_countries(request):
     lang = get_language()[:2]
     countries = Country.objects.all()
@@ -47,49 +47,83 @@ def cities_in_country(request):
     li = [(x.geoname_id, x.crc) for x in data[:size]]
     return HttpResponse(json.dumps(li), content_type="application/json")
 
+@require_http_methods(["GET", "HEAD"])
 def city_by_latlng(request):
-    """The client sends values from the HTML5 geolocation API: accuracy,
-    longitude, latitude. Find the city closest to the location and
-    return its data.
+    """Receive GET lat/lng and return localized info on nearest city.
+
+    The client sends values from the HTML5 geolocation API: longitude
+    and latitude. Find the city closest to the location and return its
+    data in the language set in the LANGUAGE setting.
     """
     try:
         lat = float(request.GET.get('latitude', None))
         lng = float(request.GET.get('longitude', None))
     except TypeError:
         return HttpResponseBadRequest()
-    city = City.by_latlng(lat, lng)
-    data = { "id": city.pk, "lat": city.lat, "lng": city.lng,
-             "population": city.population, "country": city.country.pk,
-             "crc": city.get_crc(), }
-    return HttpResponse(json.dumps(data), content_type="application/json")
+    try:
+        city = City.by_latlng(lat, lng)
+    except City.DoesNotExist:
+        raise Http404
+    try:
+        an = AltName.objects.get(geoname_id=city.pk, type=3,
+                                 is_main=True, language=settings.LANGUAGE_CODE)
+    except AltName.DoesNotExist:
+        raise Http404
+
+    return HttpResponse(json.dumps({
+        "id": city.id,
+        "lat": city.lat,
+        "lng": city.lng,
+        "region": city.region.pk,
+        "country": city.country.pk,
+        "population": city.population,
+        "slug": an.slug,
+        "name": an.name,
+        "crc": an.crc,
+        "url": an.url,
+    }), content_type="application/json")
 
 @require_http_methods(["GET", "HEAD"])
 def city_autocomplete_crc(request):
     """Returns a json list of matching AltName.crc values.
 
-    For the string GET "q", return a simple list of matching strings.
+    GET "q" Partial city name to be searched for.
+    GET "lg" (optional) A language code, must be in settings.LANGUAGES.
+    GET "size" (optional) Max number of items in results list.
+
     Result is ordered alphabetically with those values first that begin
     with q, followed by values that contain q somewhere else in the
     string.
 
-    Only crc values of type=3 (city) and in the user's selected language
-    are returned.
+    Only crc values of type=3 (city) and in the selected language are
+    returned.
     """
-    CITY_AUTOCOMPELTE_MIN_LEN = getattr(settings,
-                                        'CITY_AUTOCOMPELTE_MIN_LEN', 4)
-    lg = get_language()[:2]
+    min_len = getattr(settings, 'CITY_AUTOCOMPELTE_MIN_LEN', 2)
     q = request.GET.get('q', '')
+    lg = request.GET.get('lg', get_language()[:2])
     size = int(request.GET.get('size', 20))
-    if len(q) < CITY_AUTOCOMPELTE_MIN_LEN:
-        return HttpResponseBadRequest()
+    if not q or len(q) < min_len:
+        return HttpResponseBadRequest('Min. length {} chars.'.format(min_len))
     # First lookup all crc values in AltName that begin with q.
     an = AltName.objects.filter(crc__istartswith=q, language=lg, type=3)
-    li = [x['crc'] for x in an.order_by('crc')[:size].values('crc')]
+    li = [x for x in an.values_list('crc', flat=True).order_by('crc')[:size]]
     # If there are less than "size" values, lookup names that just
     # contain q.
     if len(li) < size:
         rsize = size - len(li)
-        an = AltName.objects.filter(crc__icontains=q, language=lg,
-                                    type=3).exclude(crc__istartswith=q)
-        li += [x['crc'] for x in an.order_by('crc')[:rsize].values('crc')]
+        an = AltName.objects.filter(
+            crc__icontains=q, language=lg, type=3).exclude(crc__istartswith=q)
+        li += [x for x in
+               an.values_list('crc', flat=True).order_by('crc')[:rsize]]
+    # Finally, clean up.
+    li = list_uniq(li)
     return HttpResponse(json.dumps(li), content_type="application/json")
+
+### HELPERS ###################################################################
+
+def list_uniq(seq):
+    # http://stackoverflow.com/questions/480214/how-do-you-remove-duplicates
+    #                            -from-a-list-in-python-whilst-preserving-order
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
