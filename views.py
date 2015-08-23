@@ -17,10 +17,24 @@ from django.utils.translation import get_language
 from dtrcity.models import Country, Region, City, AltName
 
 @require_http_methods(["GET", "HEAD"])
+def city_item(request, country, region, city):
+    url = '/'.join([country, region, city])
+    lg = get_language()[:2]
+    an = get_object_or_404(AltName, url=url, language=lg, type=3,is_main=True)
+    city = get_object_or_404(City, pk=an.geoname_id)
+    city_name, region_name, country_name = an.crc.split(', ', 2)
+    x = { 'id': city.id, 'lat': city.lat, 'lng': city.lng,
+          'timezone': city.timezone, 'population': city.population,
+          'language': an.language, 'city_name': city_name, 
+          'region_name': region_name, 'country_name': country_name,
+          'url': an.url, 'crc': an.crc, 'name': an.name, 'slug': an.slug }
+    return HttpResponse(json.dumps(x), content_type="application/json")
+
+@require_http_methods(["GET", "HEAD"])
 def all_countries(request):
     lang = get_language()[:2]
     countries = Country.objects.all()
-    an = AltName.objects.filter(geoname_id__in=countries, is_main=1, type=1,
+    an = AltName.objects.filter(geoname_id__in=countries, is_main=True, type=1,
                                 language=lang).order_by('name')
     li = [(x.geoname_id, x.name) for x in an]
     return HttpResponse(json.dumps(li), content_type="application/json")
@@ -42,7 +56,7 @@ def cities_in_country(request):
     # Find all City objects in the country of the required size.
     cities = City.objects.filter(country=country, population__gt=population)
     # Finally, look up the localized names of the City objects.
-    data = AltName.objects.filter(geoname_id__in=cities, is_main=1, type=3,
+    data = AltName.objects.filter(geoname_id__in=cities, is_main=True, type=3,
                                   language=get_language()[:2]).order_by('crc')
     li = [(x.geoname_id, x.crc) for x in data[:size]]
     return HttpResponse(json.dumps(li), content_type="application/json")
@@ -85,11 +99,23 @@ def city_by_latlng(request):
 
 @require_http_methods(["GET", "HEAD"])
 def city_autocomplete_crc(request):
-    """Returns a json list of matching AltName.crc values.
+    """Returns a json list of matching AltName.crc objects.
 
-    GET "q" Partial city name to be searched for.
-    GET "lg" (optional) A language code, must be in settings.LANGUAGES.
-    GET "size" (optional) Max number of items in results list.
+    GET "q" 
+        Partial city name to be searched for.
+    GET "lg" (optional) 
+        A language code, must be in settings.LANGUAGES.
+    GET "size" (optional) 
+        Max number of items in results list.
+    GET "result_fields" (default: crc) 
+        Space separated list of data fields to return.
+    GET "flat" (default: True) 
+        Only if one result field is requsted.
+
+    Example with flat=False:
+        [{"crc":"Some, where, place"},{"crc":"Another, some, place"}]
+    Same example with flat=True:
+        ["Some, where, place","Another, some, place"]
 
     Result is ordered alphabetically with those values first that begin
     with q, followed by values that contain q somewhere else in the
@@ -102,21 +128,40 @@ def city_autocomplete_crc(request):
     q = request.GET.get('q', '')
     lg = request.GET.get('lg', get_language()[:2])
     size = int(request.GET.get('size', 20))
+    fields = list(request.GET.get('fields', 'crc').split(' '))
+    flat = request.GET.get('flat', True)
+
+    if len(fields) < 1:
+        return HttpResponseBadRequest('No result fields defined.')
+    if len(fields) > 1: # Can't be flat.
+        flat = False
     if not q or len(q) < min_len:
         return HttpResponseBadRequest('Min. length {} chars.'.format(min_len))
+
     # First lookup all crc values in AltName that begin with q.
     an = AltName.objects.filter(crc__istartswith=q, language=lg, type=3)
-    li = [x for x in an.values_list('crc', flat=True).order_by('crc')[:size]]
+    if flat:
+        an = an.values_list(*fields, flat=True)
+    else:
+        an = an.values(*fields)
+    li = [x for x in an.order_by('crc')[:size]]
+
     # If there are less than "size" values, lookup names that just
     # contain q.
     if len(li) < size:
         rsize = size - len(li)
-        an = AltName.objects.filter(
-            crc__icontains=q, language=lg, type=3).exclude(crc__istartswith=q)
-        li += [x for x in
-               an.values_list('crc', flat=True).order_by('crc')[:rsize]]
+        an = AltName.objects.filter(crc__icontains=q, language=lg, type=3)\
+                            .exclude(crc__istartswith=q)
+        if flat:
+            an = an.values_list(*fields, flat=True)
+        else:
+            an = an.values(*fields)
+        li += [x for x in an.order_by('crc')[:rsize]]
     # Finally, clean up.
-    li = list_uniq(li)
+    if flat:
+        li = list_uniq(li)
+    #else:
+    #    li = list_uniq(li)
     return HttpResponse(json.dumps(li), content_type="application/json")
 
 ### HELPERS ###################################################################
