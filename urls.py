@@ -4,12 +4,17 @@ from __future__ import (unicode_literals, absolute_import, division,
 
 from django.conf.urls import patterns, include, url
 from django.conf import settings
-
-from dtrcity.views import city_autocomplete_crc, cities_in_country, all_countries
+from dtrcity import views as city_views
 
 urlpatterns = patterns('',
-    url(r'all-countries.json$', all_countries, name='all_countries'),
-    url(r'autocomplete-crc.json$', city_autocomplete_crc, name='city_autocomplete_crc'),
-    url(r'cities-in-country.json$', cities_in_country, name='cities_in_country'),
-
+    url(r'^api/v1/all-countries.json$',
+        city_views.all_countries, name='all_countries'),
+    url(r'^api/v1/autocomplete-crc.json$',
+        city_views.city_autocomplete_crc, name='city_autocomplete_crc'),
+    url(r'^api/v1/cities-in-country.json$',
+        city_views.cities_in_country, name='cities_in_country'),
+    url(r'^api/v1/city-by-latlng.json$',
+        city_views.city_by_latlng, name='city_by_latlng'),
+    url(r'^api/v1/(?P<country>[a-z0-9-]+)/(?P<region>[a-z0-9-]+)/(?P<city>[a-z0-9-]+).json$',
+        city_views.city_item, name='city_item'),
 )
