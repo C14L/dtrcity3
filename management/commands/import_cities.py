@@ -1,4 +1,9 @@
-"""Import all geo data from an online source.
+# -*- coding: utf-8 -*-
+from __future__ import (unicode_literals, absolute_import, division,
+                        print_function)
+
+"""
+Import all geo data from an online source.
 
 This is "cities_very_light" but language aware. AltNames are imported in
 various different languages (defined in settings.LANGUAGES list),
@@ -6,8 +11,12 @@ and different ways of spelling for the same location. Each location has
 a main way to spell it "is_main" that should be used for display.
 """
 
+import codecs
 import io, os, zipfile, time
-from urllib.request import urlopen
+try:
+    from urllib.request  import urlopen
+except ImportError:
+    from urllib2 import urlopen
 from optparse import make_option
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -113,9 +122,9 @@ class Command(BaseCommand):
                 print('Warning: An exception occured for "{}"'.format(url))
                 web_file = None
                 continue
-        #else:
-        #    print("ERROR: Web file not found: {}. Tried URLs:\n{}"\
-        #        .format(filename, '\n'.join(urls)))
+        else:
+            print("ERROR: Web file not found: {}. Tried URLs:\n{}".format(
+                  filename, '\n'.join(urls)))
 
         uptodate = False
         filepath = os.path.join(self.data_dir, filename)
@@ -137,9 +146,10 @@ class Command(BaseCommand):
             print("Downloading: " + filename)
             if not os.path.exists(self.data_dir):
                 os.makedirs(self.data_dir)
-            file = open(os.path.join(self.data_dir, filename), 'wb')
-            file.write(web_file.read())
-            file.close()
+            fn = os.path.join(self.data_dir, filename)
+            with codecs.open(fn, 'wb', encoding="utf-8") as fh:
+                fh.write(web_file.read())
+                fh.close()
         elif not os.path.exists(filepath):
             raise Exception("File not found and download failed: " + filename)
 
@@ -153,16 +163,16 @@ class Command(BaseCommand):
     def get_data(self, filekey):
         filename = conf['FILES'][filekey]['filename']
         name, ext = filename.rsplit('.',1)
-
         if (ext == 'zip'):
-            with open(os.path.join(self.data_dir, filename), 'rb') as file:
+            fn = os.path.join(self.data_dir, filename)
+            with open(fn, 'rb') as file:
                 with zipfile.ZipFile(file, mode='r').open(name + '.txt', 'rU') as zip:
                     data = io.TextIOWrapper(io.BytesIO(zip.read()))
             print(data)
         else:
-            with open(os.path.join(self.data_dir, filename), 'r') as file:
-                data = file.read().split('\n')
-
+            fn = os.path.join(self.data_dir, filename)
+            with codecs.open(fn, 'r', encoding="utf-8") as fh:
+                data = fh.read().split('\n')
         return data
 
     def parse(self, data):
