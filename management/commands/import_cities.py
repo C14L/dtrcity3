@@ -12,16 +12,22 @@ a main way to spell it "is_main" that should be used for display.
 """
 
 import codecs
-import io, os, zipfile, time
+import io
+import os
+import zipfile
+import time
+
 try:
-    from urllib.request  import urlopen
+    from urllib.request import urlopen
 except ImportError:
     from urllib2 import urlopen
+
 from optparse import make_option
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
 from dtrcity.models import Country, Region, City, AltName
+
 
 conf = {}
 conf['URL_BASES'] = {
@@ -60,35 +66,40 @@ conf['FILES'] = {
         'urls':     [conf['URL_BASES']['geonames']['zip']+'{filename}', ]
     }
 }
-
 conf['COUNTRY_CODES'] = [
-    'AD','AE','AF','AG','AI','AL','AM','AO','AQ','AR','AS','AT','AU','AW','AX','AZ',
-    'BA','BB','BD','BE','BF','BG','BH','BI','BJ','BL','BM','BN','BO','BQ','BR','BS','BT','BV','BW','BY','BZ',
-    'CA','CC','CD','CF','CG','CH','CI','CK','CL','CM','CN','CO','CR','CU','CV','CW','CX','CY','CZ',
-    'DE','DJ','DK','DM','DO','DZ','EC','EE','EG','EH','ER','ES','ET','FI','FJ','FK','FM','FO','FR',
-    'GA','GB','GD','GE','GF','GG','GH','GI','GL','GM','GN','GP','GQ','GR','GS','GT','GU','GW','GY',
-    'HK','HM','HN','HR','HT','HU','ID','IE','IL','IM','IN','IO','IQ','IR','IS','IT','JE','JM','JO','JP',
-    'KE','KG','KH','KI','KM','KN','KP','KR','XK','KW','KY','KZ','LA','LB','LC','LI','LK','LR','LS','LT','LU','LV','LY',
-    'MA','MC','MD','ME','MF','MG','MH','MK','ML','MM','MN','MO','MP','MQ','MR','MS','MT','MU','MV','MW','MX','MY','MZ',
-    'NA','NC','NE','NF','NG','NI','NL','NO','NP','NR','NU','NZ','OM',
-    'PA','PE','PF','PG','PH','PK','PL','PM','PN','PR','PS','PT','PW','PY','QA','RE','RO','RS','RU','RW',
-    'SA','SB','SC','SD','SS','SE','SG','SH','SI','SJ','SK','SL','SM','SN','SO','SR','ST','SV','SX','SY','SZ',
-    'TC','TD','TF','TG','TH','TJ','TK','TL','TM','TN','TO','TR','TT','TV','TW','TZ','UA','UG','UM','US','UY','UZ',
-    'VA','VC','VE','VG','VI','VN','VU','WF','WS','YE','YT','ZA','ZM','ZW',
-]
+    'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT',
+    'AU', 'AW', 'AX', 'AZ', 'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI',
+    'BJ', 'BL', 'BM', 'BN', 'BO', 'BQ', 'BR', 'BS', 'BT', 'BV', 'BW', 'BY',
+    'BZ', 'CA', 'CC', 'CD', 'CF', 'CG', 'CH', 'CI', 'CK', 'CL', 'CM', 'CN',
+    'CO', 'CR', 'CU', 'CV', 'CW', 'CX', 'CY', 'CZ', 'DE', 'DJ', 'DK', 'DM',
+    'DO', 'DZ', 'EC', 'EE', 'EG', 'EH', 'ER', 'ES', 'ET', 'FI', 'FJ', 'FK',
+    'FM', 'FO', 'FR', 'GA', 'GB', 'GD', 'GE', 'GF', 'GG', 'GH', 'GI', 'GL',
+    'GM', 'GN', 'GP', 'GQ', 'GR', 'GS', 'GT', 'GU', 'GW', 'GY', 'HK', 'HM',
+    'HN', 'HR', 'HT', 'HU', 'ID', 'IE', 'IL', 'IM', 'IN', 'IO', 'IQ', 'IR',
+    'IS', 'IT', 'JE', 'JM', 'JO', 'JP', 'KE', 'KG', 'KH', 'KI', 'KM', 'KN',
+    'KP', 'KR', 'XK', 'KW', 'KY', 'KZ', 'LA', 'LB', 'LC', 'LI', 'LK', 'LR',
+    'LS', 'LT', 'LU', 'LV', 'LY', 'MA', 'MC', 'MD', 'ME', 'MF', 'MG', 'MH',
+    'MK', 'ML', 'MM', 'MN', 'MO', 'MP', 'MQ', 'MR', 'MS', 'MT', 'MU', 'MV',
+    'MW', 'MX', 'MY', 'MZ', 'NA', 'NC', 'NE', 'NF', 'NG', 'NI', 'NL', 'NO',
+    'NP', 'NR', 'NU', 'NZ', 'OM', 'PA', 'PE', 'PF', 'PG', 'PH', 'PK', 'PL',
+    'PM', 'PN', 'PR', 'PS', 'PT', 'PW', 'PY', 'QA', 'RE', 'RO', 'RS', 'RU',
+    'RW', 'SA', 'SB', 'SC', 'SD', 'SS', 'SE', 'SG', 'SH', 'SI', 'SJ', 'SK',
+    'SL', 'SM', 'SN', 'SO', 'SR', 'ST', 'SV', 'SX', 'SY', 'SZ', 'TC', 'TD',
+    'TF', 'TG', 'TH', 'TJ', 'TK', 'TL', 'TM', 'TN', 'TO', 'TR', 'TT', 'TV',
+    'TW', 'TZ', 'UA', 'UG', 'UM', 'US', 'UY', 'UZ', 'VA', 'VC', 'VE', 'VG',
+    'VI', 'VN', 'VU', 'WF', 'WS', 'YE', 'YT', 'ZA', 'ZM', 'ZW', ]
 
 # See http://www.geonames.org/export/codes.html
-conf['CITY_TYPES'] = ['PPL','PPLA','PPLC','PPLA2','PPLA3','PPLA4']
+conf['CITY_TYPES'] = ['PPL', 'PPLA', 'PPLC', 'PPLA2', 'PPLA3', 'PPLA4']
 conf['DISTRICT_TYPES'] = ['PPLX']
 
+
 class Command(BaseCommand):
-    #data_dir = os.path.join(settings.BASE_DIR, 'import_data')
-    data_dir = '/home/chris/dev-data/dtrcity'
+    data_dir = getattr(settings, 'DTRCITY_IMPORT_DIR',
+                       os.path.join(settings.BASE_DIR, 'import_data'))
     option_list = BaseCommand.option_list + (
         make_option('--force', action='store_true', default=False,
-            help='Import even if files are up-to-date.'
-        ),
-    )
+                    help='Import even if files are up-to-date.'), )
 
     def handle(self, *args, **options):
         self.download_cache = {}
@@ -97,15 +108,16 @@ class Command(BaseCommand):
         self.import_country()
         self.import_region()
         self.import_city()
-        self.import_alt_name() # All altnames from geonames db.
-        self.fillup_alt_name() # Add all orig names from country, region, city.
-        self.define_main_alt_names() # Set exactly one name per lg to 'main'.
-        self.make_crc_for_main_alt_names() # Create crc and url strings.
+        self.import_alt_name()  # all altnames from geonames db
+        self.fillup_alt_name()  # add all orig names from country, region, city
+        self.define_main_alt_names()  # set exactly one name per lg to 'main'
+        self.make_crc_for_main_alt_names()  # create crc and url strings
 
     def download(self, filekey):
         filename = conf['FILES'][filekey]['filename']
         web_file = None
-        urls = [e.format(filename=filename) for e in conf['FILES'][filekey]['urls']]
+        urls = [e.format(filename=filename)
+                for e in conf['FILES'][filekey]['urls']]
         for url in urls:
             print('Trying to fetch "{}" ...'.format(url))
             try:
@@ -139,7 +151,7 @@ class Command(BaseCommand):
                     print("File up-to-date: " + filename)
                     uptodate = True
         else:
-            print('Warning: Assuming file is up-to-date: "{}"'.format(filepath))
+            print('Warning: Assuming file is uptodate: "{}"'.format(filepath))
             uptodate = True
 
         if not uptodate and web_file is not None:
@@ -156,17 +168,19 @@ class Command(BaseCommand):
         return uptodate
 
     def download_once(self, filekey):
-        if filekey in self.download_cache: return self.download_cache[filekey]
+        if filekey in self.download_cache:
+            return self.download_cache[filekey]
         uptodate = self.download_cache[filekey] = self.download(filekey)
         return uptodate
 
     def get_data(self, filekey):
         filename = conf['FILES'][filekey]['filename']
-        name, ext = filename.rsplit('.',1)
+        name, ext = filename.rsplit('.', 1)
         if (ext == 'zip'):
             fn = os.path.join(self.data_dir, filename)
             with open(fn, 'rb') as file:
-                with zipfile.ZipFile(file, mode='r').open(name + '.txt', 'rU') as zip:
+                zf = zipfile.ZipFile(file, mode='r')
+                with zf.open(name + '.txt', 'rU') as zip:
                     data = io.TextIOWrapper(io.BytesIO(zip.read()))
             print(data)
         else:
@@ -177,7 +191,8 @@ class Command(BaseCommand):
 
     def parse(self, data):
         for line in data:
-            if len(line) < 1 or line[0] == '#': continue
+            if len(line) < 1 or line[0] == '#':
+                continue
             items = [e.strip() for e in line.split('\t')]
             yield items
 
@@ -212,7 +227,7 @@ class Command(BaseCommand):
                            len(self.geo_index['city'])))
             return
         print('Building geo index...')
-        self.geo_index = { 'country':[], 'region':[], 'city':[] }
+        self.geo_index = {'country': [], 'region': [], 'city': []}
         for obj in Country.objects.all():
             self.geo_index['country'].append(obj.id)
         for obj in Region.objects.all():
@@ -227,7 +242,8 @@ class Command(BaseCommand):
 
     def import_country(self):
         uptodate = self.download('country')
-        if uptodate and not self.force: return
+        if uptodate and not self.force:
+            return
         data = self.get_data('country')
         s = 'Importing country data from {0} country datasets...'
         print(s.format(len(data)))
@@ -235,28 +251,32 @@ class Command(BaseCommand):
         for items in self.parse(data):
             cnt += 1
             country = Country()
-            try: country.id = int(items[16]) # geoname_id
-            except: continue # skip the row if no geoname_id.
+            try:
+                country.id = int(items[16])  # geoname_id
+            except:
+                continue  # skip the row if no geoname_id.
             country.name = items[4]
-            #country.slug = slugify(country.name)
+            # country.slug = slugify(country.name)
             country.code = items[0]
             country.population = items[7]
             country.continent = items[8]
-            country.tld = items[9][1:] # strip the leading .
+            country.tld = items[9][1:]  # strip the leading .
             country.save()
         print('{} countries imported.'.format(cnt))
 
     def import_region(self):
         uptodate = self.download('region')
-        if uptodate and not self.force: return
+        if uptodate and not self.force:
+            return
         data = self.get_data('region')
         self.build_country_index()
         cnt = 0
         print('Importing region data ...')
+
         for items in self.parse(data):
             cnt += 1
             region = Region()
-            region.id = int(items[3]) # geoname_id
+            region.id = int(items[3])  # geoname_id
             region.code = items[0]
             region.name = items[1]
 
@@ -272,29 +292,32 @@ class Command(BaseCommand):
 
     def import_city(self):
         uptodate = self.download_once('city')
-        if uptodate and not self.force: return
+        if uptodate and not self.force:
+            return
         data = self.get_data('city')
         self.build_country_index()
         self.build_region_index()
         cnt = 0
         print('Importing city data ...')
+
         for items in self.parse(data):
             cnt += 1
             type = items[7]
-            if type not in conf['CITY_TYPES']: continue
+            if type not in conf['CITY_TYPES']:
+                continue
 
             city = City()
-            city.id = int(items[0]) # geoname_id
-            city.name = items[1] # Real name
-            city.lat = float(items[4]) # latitude in decimal degrees (wgs84)
-            city.lng = float(items[5]) # longitude in decimal degrees (wgs84)
+            city.id = int(items[0])  # geoname_id
+            city.name = items[1]  # Real name
+            city.lat = float(items[4])  # latitude in decimal degrees (wgs84)
+            city.lng = float(items[5])  # longitude in decimal degrees (wgs84)
             city.population = items[14]
 
             # Find country
             try:
                 city.country = self.country_index[items[8]]
             except:
-                print('Skip city "{0}", no related country found!'\
+                print('Skip city "{0}", no related country found!'
                       .format(city.id))
                 continue
 
@@ -303,7 +326,7 @@ class Command(BaseCommand):
                 rc = '{0}.{1}'.format(items[8].upper(), items[10])
                 city.region = self.region_index[rc]
             except:
-                print('Skip city "{0}", no related region found!'\
+                print('Skip city "{0}", no related region found!'
                       .format(city.id))
                 continue
 
@@ -311,11 +334,12 @@ class Command(BaseCommand):
         print('{0} cities imported.'.format(cnt))
 
     def import_alt_name(self):
-        i = j = 0
+        i = 0
 
         # Download the altnames file if necessary and fetch the data.
         uptodate = self.download('alt_name')
-        if uptodate and not self.force: return
+        if uptodate and not self.force:
+            return
 
         print('Fetching fresh alt_name data...')
         data = self.get_data('alt_name')
@@ -338,8 +362,8 @@ class Command(BaseCommand):
         print('Start importing of AltName data.')
         for items in self.parse(data):
             i += 1
-            print('{} import geoname_id "{}" for language {}'.format(i,
-                                                  items[1], items[2]), end=" ")
+            print('{} import geoname_id "{}" for language {}'
+                  .format(i, items[1], items[2]), end=" ")
 
             # Verify that the "name" items[3] contains a string:
             item_name = items[3].strip()
@@ -358,7 +382,7 @@ class Command(BaseCommand):
                 print('SKIP: Item had an empty strng for a name.')
                 continue
 
-            # Find the type (city, region, or country) for the item. Must be one
+            # Find type (city, region, or country) for the item. Must be one
             # of the three types defined above.
             item_type = None
             for t in types:
@@ -374,14 +398,14 @@ class Command(BaseCommand):
 
             # All import data clean, create database object.
             alt = AltName()
-            # Use altname_id from source database as pk. Not useful, because the
-            # pk is actually never used hereafter.
-            #alt.id = int(items[0])
+            # Use altname_id from source database as pk. Not useful, because
+            # the pk is actually never used hereafter.
+            # alt.id = int(items[0])
             # The important identifier, the geoname_id of the geo object.
             alt.geoname_id = item_geoname_id
             alt.language = items[2]
             alt.crc = ''
-            alt.name = item_name # items[3]
+            alt.name = item_name  # items[3]
             alt.slug = slugify(item_name)
             alt.type = item_type
             alt.is_main = bool(0)
@@ -409,19 +433,19 @@ class Command(BaseCommand):
         languages = [e[0] for e in settings.LANGUAGES]
         types = ((1, 'country'), (2, 'region'), (3, 'city'))
         alt = AltName.objects.all()
-        obj = { 'country': Country.objects.all(),
-                'region': Region.objects.all(),
-                'city': City.objects.all(), }
+        obj = {'country': Country.objects.all(),
+               'region': Region.objects.all(),
+               'city': City.objects.all(), }
 
         for t in types:
             for c in obj[t[1]]:
                 for lg in languages:
-                    print('[t={0}] [c={1}] [lg={2}] Check entry for "{3}"...'\
-                                                .format(t[1], c.id, lg, c.name))
+                    print('[t={0}] [c={1}] [lg={2}] Check entry for "{3}"...'
+                          .format(t[1], c.id, lg, c.name))
                     for e in alt:
                         if e.geoname_id == c.id and e.language == lg:
-                            print('Entry found with AltName id [{0}] as "{1}".'\
-                                                          .format(e.id, e.name))
+                            print('Entry found with AltName id [{0}] as "{1}".'
+                                  .format(e.id, e.name))
                             break
                     else:
                         # No entries, add one.
@@ -467,26 +491,27 @@ class Command(BaseCommand):
                                                 geoname_id=go.id, is_main=True)
                 cnt = anlist.count()
                 if cnt == 1:
-                    print('Already EXIST main for {0}--{1}'.format(lg, go.name))
+                    print('Already EXIST main for {0}, {1}'
+                          .format(lg, go.name))
                     return True
                 elif cnt > 1:
-                    print('ERROR more than one main for {0}--{1}'.format(lg,
-                                                                    go.name))
+                    print('ERROR: more than one main for {0}, {1}'
+                          .format(lg, go.name))
                     for an in anlist:
-                        an.is_main=False
+                        an.is_main = False
                         an.save()
                     print('ERROR FIXED. Trying again to find main...')
             except:
                 pass
 
             try:
-                # Try 1: Only works if there is only one single object with this
-                # geoname_id and language.
+                # Try 1: Only works if there is only one single object with
+                # this geoname_id and language.
                 an = AltName.objects.get(language=lg, geoname_id=go.id)
                 an.is_main = True
                 an.save()
-                print('Setting main for {0}--{1} to {2}'.format(
-                                                        lg, go.name, an.name))
+                print('Setting main for {0}--{1} to {2}'
+                      .format(lg, go.name, an.name))
                 return True
             except:
                 pass
@@ -494,27 +519,27 @@ class Command(BaseCommand):
             try:
                 # Try 2: Fetch the first available "short" name for the geoname
                 # object. Like USA for United States of America or Hamburg for
-                # Freie- und Hansestadt Hamburg, etc. If there is no short name,
-                # this would fail.
+                # Freie- und Hansestadt Hamburg, etc. If there is no short
+                # name, this would fail.
                 an = AltName.objects.filter(language=lg,
                                             geoname_id=go.id, is_short=1)[0]
                 an.is_main = True
                 an.save()
-                print('Setting main for {0}--{1} to {2}'.format(
-                                                        lg, go.name, an.name))
+                print('Setting main for {0}--{1} to {2}'
+                      .format(lg, go.name, an.name))
                 return True
             except:
                 pass
 
             try:
-                # Try 3: Fetch the first "preferred" name for the object or fail
-                # if there is no preferred name.
-                an = AltName.objects.filter(language=lg,
-                                            geoname_id=go.id, is_preferred=1)[0]
+                # Try 3: Fetch the first "preferred" name for the object or
+                # fail if there is no preferred name.
+                an = AltName.objects.filter(language=lg, geoname_id=go.id,
+                                            is_preferred=1)[0]
                 an.is_main = True
                 an.save()
-                print('Setting main for {0}--{1} to {2}'.format(lg, go.name,
-                                                                    an.name))
+                print('Setting main for {0}--{1} to {2}'
+                      .format(lg, go.name, an.name))
                 return True
             except:
                 pass
@@ -527,14 +552,14 @@ class Command(BaseCommand):
                 an = AltName.objects.filter(language=lg, geoname_id=go.id)[0]
                 an.is_main = True
                 an.save()
-                print('Setting main for {0}--{1} to {2}'.format(lg, go.name,
-                                                                    an.name))
+                print('Setting main for {0}--{1} to {2}'
+                      .format(lg, go.name, an.name))
                 return True
             except:
                 pass
 
-            print('FAIL: Could not set "is_main" for {0}--{1} !'.format(lg,
-                                                                    go.name))
+            print('FAIL: Could not set "is_main" for {0}--{1} !'
+                  .format(lg, go.name))
             return False
 
         # Set a main AltName for each country name.
@@ -575,8 +600,9 @@ class Command(BaseCommand):
 
             # Get the related City object.
             city = City.objects.get(pk=obj.geoname_id)
-            print('{0}--Processing city {4} "{1}" (country {2}, region {3})...'\
-                .format(i, city.name, city.country.id, city.region.id, city.id))
+            print('{0}--Processing city {4} "{1}" (country {2}, region {3})...'
+                  .format(i, city.name, city.country.id,
+                          city.region.id, city.id))
 
             # Set this AltName's values from the City object. This will help to
             # do faster lookups from user input.
@@ -585,22 +611,23 @@ class Command(BaseCommand):
             obj.lat = city.lat
             obj.lng = city.lng
 
-            # For this City object, find the commonly used ("main") names of its
-            # region and country, in the AltName object's language. So the
+            # For this City object, find the commonly used ("main") names of
+            # its region and country, in the AltName object's language. So the
             # "City, Region, Country" string will all be in the same language.
             country = AltName.objects.get(type=1, geoname_id=obj.country.id,
-                                            is_main=True, language=obj.language)
+                                          is_main=True, language=obj.language)
             region = AltName.objects.get(type=2, geoname_id=obj.region.id,
-                                            is_main=True, language=obj.language)
+                                         is_main=True, language=obj.language)
 
             # Build the "City, Region, Country" string ("crc").
             obj.crc = '{0}, {1}, {2}'.format(obj.name, region.name,
-                                                            country.name)[:200]
+                                             country.name)[:200]
             print('crc "{0}"...'.format(obj.crc))
 
             # Build the "country/region/city" URL path ("url").
             obj.url = '{0}/{1}/{2}'.format(slugify(country.name),
-                                 slugify(region.name), slugify(obj.name))[:100]
+                                           slugify(region.name),
+                                           slugify(obj.name))[:100]
             print('url "{0}"...'.format(obj.url))
 
             obj.save()

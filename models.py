@@ -7,8 +7,13 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import get_language
 
+
 # settings: Default distance around a city.
 DISTANCE_AROUND_CITY = getattr(settings, 'DISTANCE_AROUND_CITY', 20)
+# Semi-axes of WGS-84 geoidal reference
+WGS84_a = 6378137.0  # Major semiaxis [m]
+WGS84_b = 6356752.3  # Minor semiaxis [m]
+
 
 # calculate the bounding box for a given lat/lng location, from
 # http://stackoverflow.com/questions/238260/how-to-calculate-the-
@@ -16,12 +21,13 @@ DISTANCE_AROUND_CITY = getattr(settings, 'DISTANCE_AROUND_CITY', 20)
 def deg2rad(degrees):
     # degrees to radians
     return math.pi * degrees / 180.0
+
+
 def rad2deg(radians):
     # radians to degrees
     return 180.0 * radians / math.pi
-# Semi-axes of WGS-84 geoidal reference
-WGS84_a = 6378137.0  # Major semiaxis [m]
-WGS84_b = 6356752.3  # Minor semiaxis [m]
+
+
 def WGS84EarthRadius(lat):
     # http://en.wikipedia.org/wiki/Earth_radius
     # Earth radius at a given latitude, according to the WGS-84 ellipsoid [m]
@@ -30,6 +36,8 @@ def WGS84EarthRadius(lat):
     Ad = WGS84_a * math.cos(lat)
     Bd = WGS84_b * math.sin(lat)
     return math.sqrt((An*An + Bn*Bn) / (Ad*Ad + Bd*Bd))
+
+
 def boundingBox(latitudeInDegrees, longitudeInDegrees, halfSideInKm):
     # Bounding box surrounding the point at given coordinates, assuming local
     # approximation of Earth surface as a sphere of radius given by WGS84
@@ -45,6 +53,7 @@ def boundingBox(latitudeInDegrees, longitudeInDegrees, halfSideInKm):
     lonMin = lon - halfSide/pradius
     lonMax = lon + halfSide/pradius
     return (rad2deg(latMin), rad2deg(lonMin), rad2deg(latMax), rad2deg(lonMax))
+
 
 class Country(models.Model):
     """Model that describes all countries."""
@@ -65,6 +74,7 @@ class Country(models.Model):
     def __str__(self):
         return self.name
 
+
 class Region(models.Model):
     """Model that describes all regions within all countries."""
 
@@ -81,6 +91,7 @@ class Region(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class City(models.Model):
     """Model that describes all cities within all regions/countries.
@@ -128,7 +139,8 @@ class City(models.Model):
             return AltName.objects.get(geoname_id=self.pk, type=3,
                                        language=language[:2], is_main=True).crc
         except AltName.DoesNotExist:
-            print('AltName not found for {0} ({1}).'.format(self.pk, self.name))
+            print('AltName not found for {0} ({1}).'
+                  .format(self.pk, self.name))
             return ''
 
     @classmethod
@@ -192,6 +204,7 @@ class City(models.Model):
                 return City.objects.get(pk=cities[0]['pk'])
         # unlikely but possible: no city in ~2000 km from lat/lng.
         return None
+
 
 class AltName(models.Model):
     """Model that lists all possible alternative names for locations.
