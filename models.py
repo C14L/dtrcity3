@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
-from __future__ import (unicode_literals, absolute_import, division,
-                        print_function)
-
 import math
+
 from django.conf import settings
 from django.db import models
+from django.utils.text import slugify
 from django.utils.translation import get_language
-
 
 # settings: Default distance around a city.
 DISTANCE_AROUND_CITY = getattr(settings, 'DISTANCE_AROUND_CITY', 20)
@@ -74,6 +71,23 @@ class Country(models.Model):
     def __str__(self):
         return self.name
 
+    def get_main_altname(self):
+        """Return the main AltName object for this city, or None"""
+        return AltName.objects.filter(geoname_id=self.pk, is_main=True, type=1,
+                                      language=settings.LANGUAGE_CODE).first()
+
+    @property
+    def tr_name(self):
+        """Return the translated main name of the region."""
+        an = self.get_main_altname()
+        return an.name if an else self.name
+
+    @property
+    def tr_slug(self):
+        """Return the translated main slug of the region."""
+        an = self.get_main_altname()
+        return an.slug if an else self.slug
+
 
 class Region(models.Model):
     """Model that describes all regions within all countries."""
@@ -91,6 +105,23 @@ class Region(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_main_altname(self):
+        """Return the main AltName object for this city, or None"""
+        return AltName.objects.filter(geoname_id=self.pk, is_main=True, type=2,
+                                      language=settings.LANGUAGE_CODE).first()
+
+    @property
+    def tr_name(self):
+        """Return the translated main name of the region."""
+        an = self.get_main_altname()
+        return an.name if an else self.name
+
+    @property
+    def tr_slug(self):
+        """Return the translated main slug of the region."""
+        an = self.get_main_altname()
+        return an.slug if an else self.slug
 
 
 class City(models.Model):
@@ -129,6 +160,23 @@ class City(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_main_altname(self):
+        """Return the main AltName object for this city, or None"""
+        return AltName.objects.filter(geoname_id=self.pk, is_main=True, type=3,
+                                      language=settings.LANGUAGE_CODE).first()
+
+    @property
+    def tr_name(self):
+        """Return the translated main name of the city."""
+        an = self.get_main_altname()
+        return an.name if an else self.name
+
+    @property
+    def tr_slug(self):
+        """Return the translated main slug of the city."""
+        an = self.get_main_altname()
+        return an.name if an else slugify(self.name)
 
     def get_crc(self, language=None):
         """Returns the crc for a city in a given language."""
@@ -261,4 +309,4 @@ class AltName(models.Model):
         ]
 
     def __str__(self):
-        return self.crc
+        return self.name

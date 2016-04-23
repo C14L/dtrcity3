@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
-from __future__ import (unicode_literals, absolute_import, division,
-                        print_function)
+from django.conf.urls import patterns, url
 
-from django.conf.urls import patterns, url  # , include
-# from django.conf import settings
 from dtrcity import views as city_views
 
-
-urlpatterns = patterns(
+urlpatterns = [
     url(r'^api/v1/all-countries.json$',
         city_views.all_countries, name='all_countries'),
 
@@ -23,4 +18,4 @@ urlpatterns = patterns(
     url(r'^api/v1/(?P<country>[a-z0-9-]+)/(?P<region>[a-z0-9-]+)/'
         r'(?P<city>[a-z0-9-]+).json$',
         city_views.city_item, name='city_item'),
-)
+]

@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
-from __future__ import (unicode_literals, absolute_import, division,
-                        print_function)
-
 import json
 
 from django.conf import settings
-from django.http import HttpResponseBadRequest        # 400
-# from django.http import HttpResponseNotFound        # 404
-# from django.http import HttpResponseNotAllowed      # 405 eg ['GET','POST']
-from django.http import HttpResponse, Http404  # , QueryDict
-from django.shortcuts import get_object_or_404  # , render_to_response
-# from django.shortcuts import render
-from django.views.decorators.http import require_http_methods
+from django.http import HttpResponse, Http404
+from django.http import HttpResponseBadRequest
+from django.shortcuts import get_object_or_404
 from django.utils.translation import get_language
+from django.views.decorators.http import require_http_methods
 
-from dtrcity.models import AltName, City, Country  # , Region
+from dtrcity.models import AltName, City, Country
 
 
 @require_http_methods(["GET", "HEAD"])

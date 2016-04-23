@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import (unicode_literals, absolute_import, division,
-                        print_function)
-
 """
 Import all geo data from an online source.
 
@@ -11,25 +7,23 @@ and different ways of spelling for the same location. Each location has
 a main way to spell it "is_main" that should be used for display.
 """
 
+import time
+import zipfile
+from optparse import make_option
+from urllib.request import urlopen
+
 import codecs
 import io
 import os
-import zipfile
-import time
-
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
-
-from optparse import make_option
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
+
 from dtrcity.models import Country, Region, City, AltName
 
 
-conf = {}
+conf = dict()
+
 conf['URL_BASES'] = {
     'geonames': {
         'dump': 'http://download.geonames.org/export/dump/',
@@ -121,9 +115,9 @@ class Command(BaseCommand):
         for url in urls:
             print('Trying to fetch "{}" ...'.format(url))
             try:
-                print('Trying to open a connection ...')
+                print('Trying to open a connection ' + url)
                 web_file = urlopen(url)
-                print('Connection opened ...')
+                print('Connection opened ' + web_file.headers['content-type'])
                 if 'html' in web_file.headers['content-type']:
                     print('Warning: Received HTML header at "{}"'.format(url))
                     raise ValueError()
@@ -159,7 +153,7 @@ class Command(BaseCommand):
             if not os.path.exists(self.data_dir):
                 os.makedirs(self.data_dir)
             fn = os.path.join(self.data_dir, filename)
-            with codecs.open(fn, 'wb', encoding="utf-8") as fh:
+            with open(fn, 'wb') as fh:
                 fh.write(web_file.read())
                 fh.close()
         elif not os.path.exists(filepath):
@@ -176,16 +170,18 @@ class Command(BaseCommand):
     def get_data(self, filekey):
         filename = conf['FILES'][filekey]['filename']
         name, ext = filename.rsplit('.', 1)
-        if (ext == 'zip'):
+        if ext == 'zip':
+            print('Unzip file: ' + filename)
             fn = os.path.join(self.data_dir, filename)
             with open(fn, 'rb') as file:
                 zf = zipfile.ZipFile(file, mode='r')
                 with zf.open(name + '.txt', 'rU') as zip:
                     data = io.TextIOWrapper(io.BytesIO(zip.read()))
-            print(data)
+            # print(data)
         else:
+            print('Regular txt file: ' + filename)
             fn = os.path.join(self.data_dir, filename)
-            with codecs.open(fn, 'r', encoding="utf-8") as fh:
+            with open(fn, 'r') as fh:
                 data = fh.read().split('\n')
         return data
 
@@ -241,6 +237,7 @@ class Command(BaseCommand):
                        len(self.geo_index['city'])))
 
     def import_country(self):
+        print('Importing country data...')
         uptodate = self.download('country')
         if uptodate and not self.force:
             return
